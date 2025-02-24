@@ -27,7 +27,7 @@ class CachedFunction[**P]:
     verbose: bool = True
     # TODO: whether or not to sort the args so that e.g. `foo = [1, 2, 3]` is the same
     # as `foo = [3, 2, 1]`
-    sort_args = True
+    # sort_args = True
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> pl.LazyFrame:
         func_hash = hash_function(self.f)
