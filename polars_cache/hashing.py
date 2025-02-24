@@ -15,7 +15,6 @@ HashableArgument = (
 )
 
 
-
 def _sort_json(obj):
     if isinstance(obj, dict):
         return {k: _sort_json(v) for k, v in sorted(obj.items())}
