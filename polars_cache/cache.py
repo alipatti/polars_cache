@@ -1,20 +1,23 @@
-from dataclasses import dataclass
+from dataclasses import KW_ONLY, dataclass
 import shutil
 from pathlib import Path
-from typing import Callable, Optional, Sequence
+from typing import Callable, Concatenate, Optional, Sequence
 
 import polars as pl
 import rich
 
 from polars_cache.hashing import hash_arguments, hash_function
 
-DEFAULT_CACHE_LOCATION = Path("/tmp/polars-cache")
+DEFAULT_CACHE_LOCATION = Path("~/.cache/polars_cache/").expanduser()
+
+type CachableFunction[**P] = Callable[P, pl.LazyFrame]
 
 
 @dataclass
 class CachedFunction[**P]:
     # wrapped function
-    f: Callable[P, pl.LazyFrame]
+    f: CachableFunction[P]
+    _: KW_ONLY
     # location for cache
     # actual cahed files are stored at .../<func name>/<func hash>/<args hash>
     base_cache_directory: Path = DEFAULT_CACHE_LOCATION
@@ -22,10 +25,9 @@ class CachedFunction[**P]:
     partition_by: Optional[str | Sequence[str]] = None
     # whether to print out (maybe) useful info during execution
     verbose: bool = True
-    # TODO: whether or not to sort the args so that e.g. `foo = [1, 2, 3]` is the same 
+    # TODO: whether or not to sort the args so that e.g. `foo = [1, 2, 3]` is the same
     # as `foo = [3, 2, 1]`
     sort_args = True
-
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> pl.LazyFrame:
         func_hash = hash_function(self.f)
@@ -45,7 +47,7 @@ class CachedFunction[**P]:
             path.mkdir(parents=True, exist_ok=True)
             if self.verbose:
                 rich.print(
-                    f"[blue][bold]Cache not found[/bold]",
+                    "[blue][bold]Cache not found[/bold]",
                     f" - Function: {func_hash}",
                     f" - Arguments: {arg_hash}",
                     sep="\n",
@@ -78,3 +80,26 @@ class CachedFunction[**P]:
     @property
     def __name__(self):
         return self.f.__name__
+
+
+# takes `(f, ...) -> cached` to `(...) -> f -> cached`
+# (excuse mild python typing fuckery)
+def _extract_kwargs[**P, **A](
+    f: Callable[
+        Concatenate[CachableFunction[P], A],
+        CachedFunction[P],
+    ],
+) -> Callable[
+    A,
+    Callable[[CachableFunction[P]], CachedFunction[P]],
+]:
+    def inner(*args: A.args, **kwargs: A.kwargs):
+        def inner_inner(g: CachableFunction[P]):
+            return f(g, *args, **kwargs)
+
+        return inner_inner
+
+    return inner
+
+
+cache_ldf = _extract_kwargs(CachedFunction)
