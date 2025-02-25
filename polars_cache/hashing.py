@@ -17,7 +17,6 @@ HashableArgument = (
 
 def _hash(arg: HashableArgument, *more_args: HashableArgument, hash_length=8):
     hasher = hashlib.md5(usedforsecurity=False)
-    print(arg, type(arg))
 
     if isinstance(arg, bytes):
         hasher.update(arg)
