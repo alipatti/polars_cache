@@ -5,5 +5,5 @@ import inspect
 def args_as_dict[**P](f: Callable[P, Any], *args: P.args, **kwargs: P.kwargs):
     signature = inspect.signature(f)
 
-    # default arguments, positional arguments, kwargs
-    return f.__kwdefaults__ | dict(zip(signature.parameters, args)) | kwargs
+    # positional arguments, default kwargs, passed kwargs
+    return dict(zip(signature.parameters, args)) | f.__kwdefaults__ | kwargs
