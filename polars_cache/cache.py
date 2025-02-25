@@ -57,7 +57,7 @@ class CachedFunction[**P]:
             path.mkdir(parents=True, exist_ok=True)
 
             if self.verbose:
-                rich.print(f"[blue][bold]Cache not found at {path}")
+                rich.print(f"[blue][bold]Cache not found. Creating entry at {path}")
 
             self.f(*args, **kwargs).collect().write_parquet(
                 path if self.partition_by else path / "cache.parquet",
