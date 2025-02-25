@@ -2,11 +2,13 @@ from dataclasses import KW_ONLY, dataclass
 import shutil
 from pathlib import Path
 from typing import Callable, Concatenate, Optional, Sequence
+import inspect
 
 import polars as pl
 import rich
 
-from polars_cache.hashing import hash_arguments, hash_function
+from polars_cache.hashing import _hash
+from polars_cache.helpers import args_as_dict
 
 DEFAULT_CACHE_LOCATION = Path("~/.cache/polars_cache/").expanduser()
 
@@ -30,8 +32,16 @@ class CachedFunction[**P]:
     # sort_args = True
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> pl.LazyFrame:
-        func_hash = hash_function(self.f)
-        arg_hash = hash_arguments(self.f, *args, **kwargs)
+        arguments = args_as_dict(self.f, *args, **kwargs)
+
+        func_hash = _hash(inspect.getsource(self.f))
+        arg_hash = _hash(arguments)
+
+        if self.verbose:
+            rich.print(
+                f"[bold][blue]Function {self.f.__name__} ({func_hash}) called with arguments"
+            )
+            rich.print_json(data=arguments)
 
         function_changed = (
             (self.base_cache_directory / self.f.__name__).exists()
@@ -45,13 +55,9 @@ class CachedFunction[**P]:
 
         if not path.exists():
             path.mkdir(parents=True, exist_ok=True)
+
             if self.verbose:
-                rich.print(
-                    "[blue][bold]Cache not found[/bold]",
-                    f" - Function: {func_hash}",
-                    f" - Arguments: {arg_hash}",
-                    sep="\n",
-                )
+                rich.print("[blue][bold]Cache not found at {path}")
 
             self.f(*args, **kwargs).collect().write_parquet(
                 path if self.partition_by else path / "cache.parquet",
