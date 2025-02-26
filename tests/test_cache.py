@@ -15,7 +15,7 @@ def expensive_func(
     b: int,
     *,
     c: list[int],
-    d="asdf",
+    d: pl.Expr = pl.lit("an expression!"),
 ) -> pl.LazyFrame:
     time.sleep(A_LONG_TIME)  # expensive thing
 
@@ -23,6 +23,7 @@ def expensive_func(
         a=pl.lit(a),
         b=pl.lit(b),
         c=pl.Series(c),
+        d=d,
     ).lazy()
 
 

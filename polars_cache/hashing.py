@@ -10,6 +10,7 @@ HashableArgument = (
     | int
     | bool
     | pl.DataFrame
+    | pl.Expr
     | Mapping["HashableArgument", "HashableArgument"]
     | Iterable["HashableArgument"]
 )
@@ -23,6 +24,9 @@ def _hash(arg: HashableArgument, *more_args: HashableArgument, hash_length=8):
 
     elif isinstance(arg, str):
         hasher.update(arg.encode())
+
+    elif isinstance(arg, pl.Expr):
+        hasher.update(arg.meta.serialize())
 
     elif isinstance(arg, int):
         # boolean also handled here because it's subclass of int

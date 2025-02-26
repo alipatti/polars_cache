@@ -41,7 +41,7 @@ class CachedFunction[**P]:
             rich.print(
                 f"[bold][blue]Function {self.f.__name__} ({func_hash}) called with arguments"
             )
-            rich.print_json(data=arguments)
+            rich.print(arguments)
 
         function_changed = (
             (self.base_cache_directory / self.f.__name__).exists()
