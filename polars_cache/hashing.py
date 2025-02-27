@@ -1,14 +1,13 @@
 import hashlib
+from types import NoneType
 from typing import Iterable, Mapping
 
 import polars as pl
 
+StringHashableArgument = str | bytes | int | bool | NoneType
 
 HashableArgument = (
-    str
-    | bytes
-    | int
-    | bool
+    StringHashableArgument
     | pl.DataFrame
     | pl.Expr
     | Mapping["HashableArgument", "HashableArgument"]
@@ -19,18 +18,11 @@ HashableArgument = (
 def _hash(arg: HashableArgument, *more_args: HashableArgument, hash_length=8):
     hasher = hashlib.md5(usedforsecurity=False)
 
-    if isinstance(arg, bytes):
-        hasher.update(arg)
-
-    elif isinstance(arg, str):
-        hasher.update(arg.encode())
+    if isinstance(arg, StringHashableArgument):
+        hasher.update(str(arg).encode())
 
     elif isinstance(arg, pl.Expr):
         hasher.update(arg.meta.serialize())
-
-    elif isinstance(arg, int):
-        # boolean also handled here because it's subclass of int
-        hasher.update(str(arg).encode())
 
     elif isinstance(arg, pl.DataFrame):
         df_hash: int = arg.hash_rows()  # type: ignore
