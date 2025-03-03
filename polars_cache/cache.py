@@ -1,7 +1,7 @@
 from dataclasses import KW_ONLY, dataclass
 import shutil
 from pathlib import Path
-from typing import Callable, Concatenate, Optional, Sequence
+from typing import Callable, Concatenate, Optional, ParamSpec, Sequence, Generic
 import inspect
 
 import polars as pl
@@ -12,11 +12,14 @@ from polars_cache.helpers import args_as_dict
 
 DEFAULT_CACHE_LOCATION = Path("~/.cache/polars_cache/").expanduser()
 
-type CachableFunction[**P] = Callable[P, pl.LazyFrame]
+P = ParamSpec("P")
+A = ParamSpec("A")
+
+CachableFunction = Callable[P, pl.LazyFrame]
 
 
 @dataclass
-class CachedFunction[**P]:
+class CachedFunction(Generic[P]):
     # wrapped function
     f: CachableFunction[P]
     _: KW_ONLY
@@ -90,7 +93,7 @@ class CachedFunction[**P]:
 
 # takes `(f, ...) -> cached` to `(...) -> f -> cached`
 # (excuse mild python typing fuckery)
-def _extract_kwargs[**P, **A](
+def _extract_kwargs(
     f: Callable[
         Concatenate[CachableFunction[P], A],
         CachedFunction[P],

@@ -1,8 +1,10 @@
-from typing import Callable, Any
+from typing import Callable, Any, ParamSpec
 import inspect
 
+P = ParamSpec("P")
 
-def args_as_dict[**P](f: Callable[P, Any], *args: P.args, **kwargs: P.kwargs):
+
+def args_as_dict(f: Callable[P, Any], *args: P.args, **kwargs: P.kwargs):
     signature = inspect.signature(f)
 
     # positional arguments, default kwargs, passed kwargs
