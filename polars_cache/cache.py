@@ -57,12 +57,15 @@ class CachedFunction(Generic[P]):
         path = self.base_cache_directory / self.f.__name__ / func_hash / arg_hash
 
         if not path.exists():
-            path.mkdir(parents=True, exist_ok=True)
-
             if self.verbose:
                 rich.print(f"[blue][bold]Cache not found. Creating entry at {path}")
 
-            self.f(*args, **kwargs).collect().write_parquet(
+            df = self.f(*args, **kwargs).collect()
+
+            # make directory AFTER function completes
+            path.mkdir(parents=True, exist_ok=True)
+
+            df.write_parquet(
                 path if self.partition_by else path / "cache.parquet",
                 partition_by=self.partition_by,
             )
