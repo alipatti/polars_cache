@@ -87,6 +87,9 @@ def test_cache():
 
     different = cached_func("foo", 42, c=[1, 2, 3])
 
+    assert isinstance(cached, pl.LazyFrame)
+    assert isinstance(different, pl.LazyFrame)
+
     assert_frame_equal(original, cached)
     assert_frame_not_equal(original, different)
 
@@ -96,7 +99,7 @@ def test_eager_cache():
 
     cached = eager_cached_func("hello!", 420, c=[1, 2, 3])
 
-    assert isinstance(cached, type(original))
+    assert isinstance(cached, pl.DataFrame)
 
     assert_frame_equal(original, cached)
 
