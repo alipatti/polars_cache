@@ -1,7 +1,15 @@
 from dataclasses import KW_ONLY, dataclass
 import shutil
 from pathlib import Path
-from typing import Callable, Concatenate, Optional, ParamSpec, Sequence, Generic
+from typing import (
+    Callable,
+    Concatenate,
+    Optional,
+    ParamSpec,
+    Sequence,
+    Generic,
+    TypeVar,
+)
 import inspect
 
 import polars as pl
@@ -15,13 +23,16 @@ DEFAULT_CACHE_LOCATION = Path("~/.cache/polars_cache/").expanduser()
 P = ParamSpec("P")
 A = ParamSpec("A")
 
-CachableFunction = Callable[P, pl.LazyFrame]
+# generic for (lazy) data frame
+DF = TypeVar("DF", pl.DataFrame, pl.LazyFrame)
+
+CachableFunction = Callable[P, DF]
 
 
 @dataclass
-class CachedFunction(Generic[P]):
+class CachedFunction(Generic[P, DF]):
     # wrapped function
-    f: CachableFunction[P]
+    f: CachableFunction[P, DF]
     _: KW_ONLY
     # location for cache
     # actual cahed files are stored at .../<func name>/<func hash>/<args hash>
@@ -34,7 +45,9 @@ class CachedFunction(Generic[P]):
     # as `foo = [3, 2, 1]`
     # sort_args = True
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> pl.LazyFrame:
+    # TODO: make function return dataframe if the original function returns a dataframe
+    # (will somehow need to store this information on the cache (or impute it from the function signature)
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> DF:
         arguments = args_as_dict(self.f, *args, **kwargs)
 
         func_hash = _hash(inspect.getsource(self.f))
@@ -60,7 +73,7 @@ class CachedFunction(Generic[P]):
             if self.verbose:
                 rich.print(f"[blue][bold]Cache not found. Creating entry at {path}")
 
-            df = self.f(*args, **kwargs).collect()
+            df = self.f(*args, **kwargs).lazy().collect()
 
             # make directory AFTER function completes
             path.mkdir(parents=True, exist_ok=True)
@@ -73,10 +86,12 @@ class CachedFunction(Generic[P]):
         if self.verbose:
             rich.print(f"[blue][bold]Restoring from {path}")
 
-        return pl.scan_parquet(
+        ldf = pl.scan_parquet(
             path / "**/*.parquet",
             hive_partitioning=bool(self.partition_by),
         )
+
+        return ldf if self.is_lazy else ldf.collect()  # type: ignore
 
     def clear_cache(self):
         if not self.cache_location.exists():
@@ -90,6 +105,10 @@ class CachedFunction(Generic[P]):
         return self.base_cache_directory / self.f.__name__
 
     @property
+    def is_lazy(self):
+        return self.f.__annotations__.get("return", pl.LazyFrame) is pl.LazyFrame
+
+    @property
     def __name__(self):
         return self.f.__name__
 
@@ -98,15 +117,15 @@ class CachedFunction(Generic[P]):
 # (excuse mild python typing fuckery)
 def _extract_kwargs(
     f: Callable[
-        Concatenate[CachableFunction[P], A],
-        CachedFunction[P],
+        Concatenate[CachableFunction[P, DF], A],
+        CachedFunction[P, DF],
     ],
 ) -> Callable[
     A,
-    Callable[[CachableFunction[P]], CachedFunction[P]],
+    Callable[[CachableFunction[P, DF]], CachedFunction[P, DF]],
 ]:
     def inner(*args: A.args, **kwargs: A.kwargs):
-        def inner_inner(g: CachableFunction[P]):
+        def inner_inner(g: CachableFunction[P, DF]):
             return f(g, *args, **kwargs)
 
         return inner_inner

@@ -27,7 +27,25 @@ def expensive_func(
     ).lazy()
 
 
+def expensive_func_eager(
+    a: str,
+    b: int,
+    *,
+    c: list[int],
+    d: pl.Expr = pl.lit("an expression!"),
+) -> pl.DataFrame:
+    time.sleep(A_LONG_TIME)  # expensive thing
+
+    return pl.select(
+        a=pl.lit(a),
+        b=pl.lit(b),
+        c=pl.Series(c),
+        d=d,
+    )
+
+
 cached_func = CachedFunction(expensive_func)
+eager_cached_func = CachedFunction(expensive_func_eager)
 
 
 different_cache_dir = CachedFunction(
@@ -71,6 +89,16 @@ def test_cache():
 
     assert_frame_equal(original, cached)
     assert_frame_not_equal(original, different)
+
+
+def test_eager_cache():
+    original = eager_cached_func("hello!", 420, c=[1, 2, 3])
+
+    cached = eager_cached_func("hello!", 420, c=[1, 2, 3])
+
+    assert isinstance(cached, type(original))
+
+    assert_frame_equal(original, cached)
 
 
 def test_different_cache_directory():
