@@ -25,7 +25,11 @@ def _hash(arg: HashableArgument, *more_args: HashableArgument, hash_length=8):
         hasher.update(arg.meta.serialize())
 
     elif isinstance(arg, pl.DataFrame):
-        df_hash: int = arg.hash_rows()  # type: ignore
+        df_hash = arg.hash_rows().sum()
+        hasher.update(str(df_hash).encode())
+
+    elif isinstance(arg, pl.Series):
+        df_hash = arg.hash().sum()
         hasher.update(str(df_hash).encode())
 
     elif isinstance(arg, Mapping):
