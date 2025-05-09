@@ -4,7 +4,7 @@ from typing import Iterable, Mapping
 
 import polars as pl
 
-StringHashableArgument = str | bytes | int | bool | NoneType
+StringHashableArgument = str | bytes | float | int | bool | NoneType
 
 HashableArgument = (
     StringHashableArgument
