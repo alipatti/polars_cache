@@ -5,7 +5,7 @@ import polars as pl
 from polars.testing import assert_frame_equal, assert_frame_not_equal
 import pytest
 
-from polars_cache.cache import CachedFunction, cache_ldf
+from polars_cache import CachedFunction, cache
 
 A_LONG_TIME = 0.25
 
@@ -50,14 +50,14 @@ eager_cached_func = CachedFunction(expensive_func_eager)
 
 different_cache_dir = CachedFunction(
     expensive_func,
-    base_cache_directory=Path("/tmp/different-cache"),
+    base_path=Path("/tmp/different-cache"),
 )
 
 
 partitioned = CachedFunction(
     expensive_func,
     partition_by=["c"],
-    base_cache_directory=Path("/tmp/partitioned-cache"),
+    base_path=Path("/tmp/partitioned-cache"),
 )
 
 
@@ -141,7 +141,7 @@ def test_partition():
 
 
 def test_decorator():
-    cached_func = cache_ldf()(expensive_func)
+    cached_func = cache()(expensive_func)
 
     cached_func("hello!", 420, c=[1, 2, 3])
 

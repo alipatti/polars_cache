@@ -1,5 +1,9 @@
-from polars_cache.cache import cache_ldf
+from polars_cache.cache import CachedFunction, _extract_kwargs
+
+cache_ldf = _extract_kwargs(CachedFunction)
+cache = _extract_kwargs(CachedFunction)
 
 __all__ = [
-    "cache_ldf",
+    "cache",
+    "cache_ldf",  # TODO: depricate this
 ]

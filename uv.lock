@@ -177,8 +177,8 @@ wheels = [
 
 [[package]]
 name = "polars-cache"
-version = "0.1.8"
-source = { virtual = "." }
+version = "0.1.10"
+source = { editable = "." }
 dependencies = [
     { name = "polars" },
     { name = "rich" },
