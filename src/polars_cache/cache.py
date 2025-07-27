@@ -64,20 +64,25 @@ class CachedFunction(Generic[P, DF]):
         if self.verbose >= 2 and function_changed:
             rich.print(f"Detected change in function {self.f.__name__}")
 
+        # determine location of cache
         path = self.cache_location / func_hash / arg_hash
 
-        valid_cache = (
-            path.exists()  # cache exists
-            and (
-                self.expires_after is None  # cache never expires
-                or datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)
-                < self.expires_after  # cache hasn't expired
-            )
-        )
+        # determine if cache is valid
+        if path.exists():
+            if self.expires_after is None:
+                valid_cache = True
+            else:
+                cache_timestamp = datetime.fromtimestamp(path.stat().st_mtime)
+                cache_age = datetime.now() - cache_timestamp
+                valid_cache = cache_age < self.expires_after
+        else:
+            valid_cache = False
 
         if not valid_cache:
             if self.verbose >= 1:
-                reason = "not found" if not path.exists() else "expired"
+                reason = (
+                    "not found" if not path.exists() else f"expired (age = {cache_age})"  # type: ignore
+                )
                 rich.print(f"{display_name} {reason}. Executing...")
 
             df = self.f(*args, **kwargs).lazy().collect()
