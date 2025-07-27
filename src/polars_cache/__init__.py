@@ -1,4 +1,4 @@
-from polars_cache.cache import CachedFunction, _extract_kwargs
+from polars_cache.old_cache import CachedFunction, _extract_kwargs
 
 cache_ldf = _extract_kwargs(CachedFunction)
 cache = _extract_kwargs(CachedFunction)
