@@ -1,3 +1,4 @@
 .DS_Store
 __pycache__
 polars_cache.egg-info/
+.polars_cache
