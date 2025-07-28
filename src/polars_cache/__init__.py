@@ -27,9 +27,6 @@ def cache_to_disc(
     The cached result will be reused on subsequent invocations of `.collect()`, even across
     Python sessions.
 
-    **WARNING:** This function is opaque to the Polars optimizer and therefore will block
-    predicate pushdown, projection pushdown, and other optmizations. Use with caution.
-
     Parameters
     ----------
     query
@@ -57,24 +54,6 @@ def cache_to_disc(
         A LazyFrame. When `collect()` is called, it will load from the cache if
         it exists and has not expired. If not, it will evaluate, cache, and
         return the result.
-
-    Notes
-    -----
-
-    The query is identified by a hash of `query.serialize()`, and therefore is not
-    guaranteed to be stable across versions of Polars.
-
-    Examples
-    --------
-    >>> import polars as pl
-    >>> lf = (
-    >>>     pl.LazyFrame({"x": [1, 2, 3]})
-    >>>     .with_columns(very_expensive_compuation(x))
-    >>>     .pipe(cache_to_disc, max_age=120) # in seconds
-    >>> )
-    >>>
-    >>> df1 = query.collect()  # populate the cache
-    >>> df2 = query.collect()  # second invocation will be much faster!
     """
 
     cache_location = _cache_location(query, base_directory)
