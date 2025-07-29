@@ -4,6 +4,7 @@
 """  # noqa
 
 import hashlib
+import importlib.metadata
 import os
 import re
 import shutil
@@ -14,9 +15,12 @@ from typing import Any
 import polars as pl
 
 __all__ = ["cache_to_disc"]
+__version__ = importlib.metadata.version("polars_cache")
+__docformat__ = "numpy"
 
 _HASH_FUNCTION: str = os.environ.get("POLARS_CACHE_HASH_FUNCTION", "md5")
 _DEFAULT_CACHE_DIRECTORY = os.environ.get("POLARS_CACHE_DIRECTORY", ".polars_cache/")
+
 
 def cache_to_disc(
     query: pl.LazyFrame,
@@ -32,8 +36,8 @@ def cache_to_disc(
 ) -> pl.LazyFrame:
     """
     Cache this LazyFrame to disc when `.collect()` is called (possibly far downstream).
-    The cached result will be reused on subsequent invocations of `.collect()`, even across
-    Python sessions.
+    
+    The cached result will be reused on subsequent invocations of `.collect()`, even across Python sessions.
 
     Parameters
     ----------
@@ -59,13 +63,6 @@ def cache_to_disc(
 
     collect_options
         Options to pass to `query.collect`.
-
-    Returns
-    -------
-    pl.LazyFrame
-        A LazyFrame. When `collect()` is called, it will load from the cache if
-        the cache exists and has not expired. If not, it will evaluate, cache, and
-        return the result.
 
     Notes
     -----

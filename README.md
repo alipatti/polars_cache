@@ -28,7 +28,7 @@ another_query = query.with_columns(y = pl.col("x") + 7)
 df3 = another_query.collect() # this will use the cache!
 ```
 
-Updating a source will cause the cache to be made invalid:
+Updating a source will cause the cache to refresh:
 
 ```python
 import os
