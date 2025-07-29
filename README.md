@@ -10,12 +10,12 @@ import polars_cache as pc
 
 lf = pl.LazyFrame({"x" : range(100)})
 
-def very_expensive_compuation(col: str):
+def very_expensive(col: str):
     pl.col(col).pow(2).exp().sqrt()
 
 query = (
     lf
-    .with_columns(very_expensive_compuation("x"))
+    .with_columns(very_expensive("x"))
     .pipe(pc.cache_to_disc, max_age=120) # set up cache
 )
 
