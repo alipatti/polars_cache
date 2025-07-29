@@ -1,6 +1,6 @@
 [project]
 name = "polars-cache"
-version = "1.0.3"
+version = "1.0.4"
 description = "A lightweight caching library for polars"
 readme = "README.md"
 requires-python = ">=3.10"

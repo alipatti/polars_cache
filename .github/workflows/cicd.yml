@@ -32,7 +32,7 @@ jobs:
 
       # build and publish package to pypi
       - run: uv build
-      - run: uv publish --trusted-publishing always
+      - uses: pypa/gh-action-pypi-publish@release/v1
 
   docs:
     needs: pypi # ensure upload was successful
