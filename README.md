@@ -2,8 +2,6 @@
 
 A lightweight, lazy, disc-based cache for Polars LazyFrames.
 
-Uses `pl.defer` to defer populating the cache until execution time (i.e. on `.collect()` or `.sink_XXX()`)
-
 ## Usage
 
 ```python
@@ -30,10 +28,29 @@ another_query = query.with_columns(y = pl.col("x") + 7)
 df3 = another_query.collect() # this will use the cache!
 ```
 
-## Details
+Updating a source will cause the cache to be made invalid:
 
-The cache is based on a hash of `query.serialize()`, and therefore is not
-guaranteed to be stable across versions of Polars.
+```python
+import os
 
-⚠️ **WARNING:** This function is opaque to the Polars optimizer and therefore will block
-predicate pushdown, projection pushdown, and all other optmizations. Use with caution.
+query_from_a_file = (
+    pl.scan_parquet("data.parquet")
+    .group_by("age", "sex")
+    .agg(pl.len())
+    .pipe(pc.cache_to_disc, check_sources=True)
+)
+
+_ = query_from_a_file.collect() # populate cache
+result = query_from_a_file.collect() # load from cache
+
+os.utime("data.parquet")  # update source timestamp
+new_result = query_from_a_file.collect() # cache is invalid -- will refresh
+```
+
+## ⚠️ Warning ⚠️
+
+This function is opaque to the Polars optimizer and will split your query into
+two chunks: one before the cache statment and one after. Each query will be
+independently optimzed by Polars, but optimizations (e.g. projection and
+predicate pushdown) will NOT be able to cross the cache barrier. Use with
+caution.
