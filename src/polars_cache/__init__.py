@@ -1,10 +1,15 @@
+"""
+.. include:: ../../README.md
+   :start-line: 1
+"""  # noqa
+
+import hashlib
+import os
+import re
+import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-import hashlib
-import shutil
 from typing import Any
-import re
-import os
 
 import polars as pl
 
@@ -67,12 +72,10 @@ def cache_to_disc(
     The hash function and default cache base directory can be globally configured via the
     `POLARS_CACHE_HASH_FUNCTION` and `POLARS_CACHE_DIRECTORY` environment variables.
     """
-
     cache = _cache_location(query, base_directory)
 
     def on_collect() -> pl.DataFrame:
         """Function that gets called when the LazyFrame is collected."""
-
         # use the cache if it's valid
         if _valid_cache(
             cache,

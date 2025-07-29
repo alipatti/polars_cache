@@ -15,5 +15,12 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "ipython>=8.18.1",
+    "pdoc>=15.0.4",
     "pytest>=8.3.4",
 ]
+
+[tool.ruff.lint]
+select = ["D", "I"]
+
+pydocstyle.convention = "numpy"
+per-file-ignores = { "tests/**/*.py" = ["D"] }
