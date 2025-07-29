@@ -2,6 +2,8 @@
 
 A lightweight, lazy, disc-based cache for Polars LazyFrames.
 
+Uses `pl.defer` to defer populating the cache until execution time (i.e. on `.collect()` or `.sink_XXX()`)
+
 ## Usage
 
 ```python
