@@ -4,14 +4,14 @@ import hashlib
 import shutil
 from typing import Any
 import re
+import os
 
 import polars as pl
 
 __all__ = ["cache_to_disc"]
 
-_HASH_FUNCTION: str = "md5"
-_DEFAULT_CACHE_DIRECTORY = ".polars_cache/"
-
+_HASH_FUNCTION: str = os.environ.get("POLARS_CACHE_HASH_FUNCTION", "md5")
+_DEFAULT_CACHE_DIRECTORY = os.environ.get("POLARS_CACHE_DIRECTORY", ".polars_cache/")
 
 def cache_to_disc(
     query: pl.LazyFrame,
@@ -61,6 +61,11 @@ def cache_to_disc(
         A LazyFrame. When `collect()` is called, it will load from the cache if
         the cache exists and has not expired. If not, it will evaluate, cache, and
         return the result.
+
+    Notes
+    -----
+    The hash function and default cache base directory can be globally configured via the
+    `POLARS_CACHE_HASH_FUNCTION` and `POLARS_CACHE_DIRECTORY` environment variables.
     """
 
     cache = _cache_location(query, base_directory)
