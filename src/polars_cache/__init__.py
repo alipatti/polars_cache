@@ -3,18 +3,21 @@ from pathlib import Path
 import hashlib
 import shutil
 from typing import Any
+import re
 
 import polars as pl
 
 __all__ = ["cache_to_disc"]
 
 _HASH_FUNCTION: str = "md5"
+_DEFAULT_CACHE_DIRECTORY = ".polars_cache/"
 
 
 def cache_to_disc(
     query: pl.LazyFrame,
     *,
-    base_directory: str | Path = ".polars_cache/",
+    check_sources: bool = True,
+    base_directory: str | Path = _DEFAULT_CACHE_DIRECTORY,
     max_age: timedelta | int | None = None,
     verbose=False,
     # options to pass on
@@ -32,8 +35,12 @@ def cache_to_disc(
     query
         The LazyFrame to cache.
 
+    check_sources
+        Check the file-system sources of the query (from `pl.scan_XYZ`) and refresh the
+        cache if any have been updated.
+
     base_directory
-        The directory where cache files are stored. Defaults to `.polars_cache` in the current directory.
+        The directory where cache files are stored. Defaults to `.polars_cache`.
 
     max_age
         Maximum age at which the cache is considered valid (in seconds if integer).
@@ -52,34 +59,39 @@ def cache_to_disc(
     -------
     pl.LazyFrame
         A LazyFrame. When `collect()` is called, it will load from the cache if
-        it exists and has not expired. If not, it will evaluate, cache, and
+        the cache exists and has not expired. If not, it will evaluate, cache, and
         return the result.
     """
 
-    cache_location = _cache_location(query, base_directory)
+    cache = _cache_location(query, base_directory)
 
     def on_collect() -> pl.DataFrame:
         """Function that gets called when the LazyFrame is collected."""
 
         # use the cache if it's valid
-        if _valid_cache(cache_location, max_age, verbose):
+        if _valid_cache(
+            cache,
+            max_age=max_age,
+            sources=_sources(query) if check_sources else [],
+            verbose=verbose,
+        ):
             if verbose:
-                print(f"CACHE: restoring from {cache_location}")
+                print(f"CACHE: restoring from {cache}")
 
-            return pl.read_parquet(cache_location, **read_parquet_options)
+            return pl.read_parquet(cache, **read_parquet_options)
 
         if verbose:
-            print(f"CACHE: creating at {cache_location}")
+            print(f"CACHE: creating at {cache}")
 
         # if doesn't exist or isn't valid, then collect the query
         df = query.collect(**collect_options)
 
         # delete existing cache
-        _remove_cache(cache_location)
+        _remove_cache(cache)
 
         # write new cache
-        cache_location.parent.mkdir(parents=True, exist_ok=True)
-        df.write_parquet(cache_location, **write_parquet_options)
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        df.write_parquet(cache, **write_parquet_options)
 
         # return collected df
         return df
@@ -91,13 +103,75 @@ def cache_to_disc(
     )
 
 
+def _valid_cache(
+    cache: Path,
+    *,
+    max_age: timedelta | int | None,
+    sources: list[Path] = [],
+    verbose: bool = False,
+) -> bool:
+    # check if cache exists
+    if not cache.exists():
+        if verbose:
+            print(f"CACHE: doesn't exist {cache}")
+
+        return False
+
+    # check if sources are newer than cache
+    cache_creation_time = _file_timestamp(cache)
+    for source in sources:
+        if _file_timestamp(source) > cache_creation_time:
+            if verbose:
+                print(f"CACHE: source has changed ({source}) {cache}")
+
+            return False
+
+    # check if cache has expiration
+    if max_age is None:
+        if verbose:
+            print(f"CACHE: found (doesn't expire) {cache}")
+
+        return True
+
+    # convert max_age to timedelta
+    if isinstance(max_age, int):
+        max_age = timedelta(seconds=max_age)
+
+    cache_age = datetime.now() - cache_creation_time
+
+    if cache_age > max_age:
+        if verbose:
+            print(f"CACHE: expired (age={cache_age.total_seconds()}s) {cache}")
+
+        return False  # cache expired
+
+    if verbose:
+        print(f"CACHE: found (age={cache_age.total_seconds()}s) {cache}")
+
+    return True
+
+
 def _cache_location(
     query: pl.LazyFrame,
     base_directory: str | Path,
+    *,
     hash_length=20,
 ) -> Path:
     hash = hashlib.new(_HASH_FUNCTION, query.serialize()).hexdigest()[:hash_length]
     return Path(base_directory) / hash
+
+
+def _sources(
+    query: pl.LazyFrame,
+    *,
+    pattern: re.Pattern[str] = re.compile(r"SCAN \[(.*?)\]"),
+) -> list[Path]:
+    query_string = query.explain(optimizations=pl.QueryOptFlags.none())
+    return [Path(s) for s in pattern.findall(query_string)]
+
+
+def _file_timestamp(path: Path) -> datetime:
+    return datetime.fromtimestamp(path.stat().st_mtime)
 
 
 def _remove_cache(cache_location: Path):
@@ -105,39 +179,3 @@ def _remove_cache(cache_location: Path):
         shutil.rmtree(cache_location)
     else:
         cache_location.unlink(missing_ok=True)
-
-
-def _valid_cache(
-    cache_location: Path,
-    max_age: timedelta | int | None,
-    verbose: bool = False,
-) -> bool:
-    if not cache_location.exists():
-        if verbose:
-            print(f"CACHE: doesn't exist {cache_location}")
-
-        return False  # cache doesn't exist
-
-    if max_age is None:
-        if verbose:
-            print(f"CACHE: found (doesn't expire) {cache_location}")
-
-        return True  # cache doesn't expire
-
-    # convert max_age to timedelta
-    if isinstance(max_age, int):
-        max_age = timedelta(seconds=max_age)
-
-    cache_creation_time = datetime.fromtimestamp(cache_location.stat().st_mtime)
-    cache_age = datetime.now() - cache_creation_time
-
-    if cache_age > max_age:
-        if verbose:
-            print(f"CACHE: expired (age={cache_age.total_seconds()}s) {cache_location}")
-
-        return False  # cache expired
-
-    if verbose:
-        print(f"CACHE: found (age={cache_age.total_seconds()}s) {cache_location}")
-
-    return True
