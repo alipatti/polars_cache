@@ -2,6 +2,8 @@
 
 A lightweight, lazy, disc-based cache for Polars LazyFrames.
 
+API Reference: https://alipatti.com/polars_cache/polars_cache.html
+
 ## Usage
 
 ```python
@@ -16,7 +18,7 @@ def very_expensive(col: str):
 query = (
     lf
     .with_columns(very_expensive("x"))
-    .pipe(pc.cache_to_disc, max_age=120) # set up cache
+    .pipe(pc.cache_to_disc, max_age=120) # set up cache (2 minutes max age)
 )
 
 df1 = query.collect()  # populate the cache
@@ -50,7 +52,7 @@ new_result = query_from_a_file.collect() # cache is invalid -- will refresh
 ## ⚠️ Warning ⚠️
 
 This function is opaque to the Polars optimizer and will split your query into
-two chunks: one before the cache statment and one after. Each query will be
-independently optimzed by Polars, but optimizations (e.g. projection and
+two chunks: one before the cache statement and one after. Each query will be
+independently optimized by Polars, but optimizations (e.g. projection and
 predicate pushdown) will NOT be able to cross the cache barrier. Use with
 caution.
