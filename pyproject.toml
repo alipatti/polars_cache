@@ -8,6 +8,12 @@ dependencies = [
     "polars>=1.30.0",
 ]
 
+[project.urls]
+Homepage = "https://alipatti.com/polars_cache/polars_cache.html"
+Repository = "https://github.com/alipatti/polars_cache"
+Documentation = "https://alipatti.com/polars_cache/polars_cache.html"
+Issues = "https://github.com/alipatti/polars_cache/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
